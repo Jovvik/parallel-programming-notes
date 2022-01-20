@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1 Практические построения на списках</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -740,6 +740,50 @@ fun remove(key) {
             return // true
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-32-relaxed-algorithms"><a class="header" href="#Лекция-32-relaxed-algorithms">Лекция 3.2. Relaxed Algorithms.</a></h1>
+<h2 id="bfs"><a class="header" href="#bfs">BFS</a></h2>
+<p>Вспомним обычный BFS:</p>
+<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
+start.distance = 0
+Q.add(start)
+while Q.isNotEmpty() {
+    u := Q.remove()
+    d := u.distance
+    for (v : u.edges) {
+        if v.distance != INF: continue
+        v.distance = d + 1
+        Q.add(v)
+    }
+}
+</code></pre>
+<p>Просто заменить <code>Queue</code> на <code>ConcurrentQueue</code> не поможет, т.к. первый поток удалит первую вершину из очереди, все остальные потоки выйдут из цикла и алгоритм станет однопоточным.</p>
+<p>Можем считать число вершин в обработке вместо <code>Q.isNotEmpty()</code>. Тогда есть другая проблема: мы не гарантируем порядок обработки вершин, это никакой не BFS. Но нас это не очень и волнует, ибо мы будем обновлять расстояние только если оно меньше того, которое уже посчитано:</p>
+<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
+start.distance = 0
+Q.add(start)
+activeNodes = 1
+while activeNodes &gt; 0 {
+    u := Q.remove()
+    d := u.distance
+    for (v : u.edges) {
+        if v.updateDistIfLower(d + 1) {
+            v.distance = d + 1
+            Q.add(v)
+            activeNodes++
+        }
+    }
+    activeNodes--
+}
+</code></pre>
+<p>С одной стороны, мы одну вершину обрабатываем одну вершину несколько раз, но с другой — мы параллельны. На реальных графах это профит.</p>
+<h2 id="Алгоритм-Дейкстры"><a class="header" href="#Алгоритм-Дейкстры">Алгоритм Дейкстры</a></h2>
+<p>Дейкстра это примерно то же самое, что у нас, только у нас приоритетная очередь. Быстрая приоритетная очередь это миф, лучший случай это куча с локами. Но мы можем написать <strong>почти</strong> приоритетную очередь. Тогда алгоритм всё ещё будет верным, но у нас опять будут инверсии.</p>
+<h3 id="multi-queue"><a class="header" href="#multi-queue">Multi-Queue</a></h3>
+<p>Возьмём T независимых очередей с локами. Операции пусть будут работать над случайно выбранными очередями.</p>
+<ul>
+<li>Добавление: добавляем в случайную очередь</li>
+<li>Удаление: берем <strong>две</strong> случайные очереди и удаляем из лучшей.</li>
+</ul>
 
                     </main>
 

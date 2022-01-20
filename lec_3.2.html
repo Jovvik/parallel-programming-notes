@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Лекция 1.2. Lock-free stack и Michael-Scott queue - Конспект по параллельному программированию</title>
+        <title>Лекция 3.2. Relaxed Algorithms - Конспект по параллельному программированию</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -77,7 +77,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html" class="active"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html" class="active"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -136,100 +136,57 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="Лекция-12-lock-free-stack-и-michael-scott-queue"><a class="header" href="#Лекция-12-lock-free-stack-и-michael-scott-queue">Лекция 1.2. Lock-free stack и Michael-Scott queue</a></h1>
-<h2 id="План-лекции"><a class="header" href="#План-лекции">План лекции</a></h2>
-<ol>
-<li>Неблокирующиеся алгоритмы</li>
-<li>Lock-free Treiber Stack</li>
-<li>Michael-Scott Queue</li>
-</ol>
-<h2 id="mutual-exclusion"><a class="header" href="#mutual-exclusion">Mutual exclusion</a></h2>
-<p>Aka <code>mutex</code> или <code>lock</code>, только один поток может держать блокировку.</p>
-<h3 id="atomic-counter"><a class="header" href="#atomic-counter">Atomic counter</a></h3>
-<pre><code class="language-kotlin">val l = Lock()
-var counter = 0
-
-fun incAndGet(): Int {
-    l.lock()
-    try {
-    return ++counter
-    } finally {
-        l.unlock()
+                        <h1 id="Лекция-32-relaxed-algorithms"><a class="header" href="#Лекция-32-relaxed-algorithms">Лекция 3.2. Relaxed Algorithms.</a></h1>
+<h2 id="bfs"><a class="header" href="#bfs">BFS</a></h2>
+<p>Вспомним обычный BFS:</p>
+<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
+start.distance = 0
+Q.add(start)
+while Q.isNotEmpty() {
+    u := Q.remove()
+    d := u.distance
+    for (v : u.edges) {
+        if v.distance != INF: continue
+        v.distance = d + 1
+        Q.add(v)
     }
 }
 </code></pre>
-<p>Эта блокировка грубая. Нет гарантии прогресса в том случае, если CPU отберут, потому что все другие потоки будут ждать наш поток.</p>
-<h2 id="lock-freedom"><a class="header" href="#lock-freedom">Lock-freedom</a></h2>
-<p>Гарантирует прогресс в системе. Базовая операция (реализована в железе): <code>CAS (Compare-And-Set)</code> – <code>CAS(p, old, new)</code> атомарно проверяет, что значение по адресу <code>p</code> атомарно совпадает с <code>old</code> и заменяет его на <code>new</code>.</p>
-<h3 id="counter"><a class="header" href="#counter">Counter</a></h3>
-<pre><code class="language-kotlin">fun getAndInc(): Int {
-    while (true) {
-        cur := c
-        if CAS(&amp;c, cur, cur + 1) {
-            return c
+<p>Просто заменить <code>Queue</code> на <code>ConcurrentQueue</code> не поможет, т.к. первый поток удалит первую вершину из очереди, все остальные потоки выйдут из цикла и алгоритм станет однопоточным.</p>
+<p>Можем считать число вершин в обработке вместо <code>Q.isNotEmpty()</code>. Тогда есть другая проблема: мы не гарантируем порядок обработки вершин, это никакой не BFS. Но нас это не очень и волнует, ибо мы будем обновлять расстояние только если оно меньше того, которое уже посчитано:</p>
+<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
+start.distance = 0
+Q.add(start)
+activeNodes = 1
+while activeNodes &gt; 0 {
+    u := Q.remove()
+    d := u.distance
+    for (v : u.edges) {
+        if v.updateDistIfLower(d + 1) {
+            v.distance = d + 1
+            Q.add(v)
+            activeNodes++
         }
     }
+    activeNodes--
 }
 </code></pre>
-<h3 id="stack"><a class="header" href="#stack">Stack</a></h3>
-<pre><code class="language-kotlin">fun pop(): Int {
-    head := H
-    while (true) {
-        if CAS(&amp;H, head, head?.Next) {
-                if head == null: return null
-                return head.Value
-            }
-        }
-    }
-}
-
-fun push(x: Int) {
-    while (true) {  
-        head := H
-        newHead := Node {Value: x, Next: head}
-        if CAS(&amp;H, head, newHead): return
-    }
-}
-
-fun top(): Int? {
-    head := H
-    return head?.Value
-}
-</code></pre>
-<p><strong>Последовательная согласованность (Sequential consistency)</strong> – это такое последовательное исполнение, которое учитывает порядок внутри потоков, но не учитывает синхронизацию между потоками.</p>
-<h3 id="elimination-for-stack"><a class="header" href="#elimination-for-stack">Elimination for Stack</a></h3>
-<p>Оптимизация следующая: заведём дополнительный массив фиксированного размера, <code>push</code> сначала пойдёт в его рандомную ячейку (или рядом, если та была уже занята), а <code>pop</code> смотрит несколько рядом стоящих ячеек и ищет занятую. Если операция дождалась (<code>push</code> – <code>pop</code>'а, <code>pop</code> – нового элемента), то всё хорошо, иначе идём в стек и действуем по выше описанному алгоритму.</p>
-<p>Таким образом, <code>push</code> и <code>pop</code> могут встретиться, поменяться данными и не дергать стек.</p>
-<h3 id="queue"><a class="header" href="#queue">Queue</a></h3>
-<p>Операция добавления элемента должна переписать <code>Next</code> у <code>Tail</code> и подвинуть <code>Tail</code> на последний элемент. Если мы перепишем <code>Next</code>, но не успеем подвинуть <code>Tail</code> (какой-то другой поток тоже начал писать) всё сломается.
-<strong>Helping</strong>: пусть если поток хочет положить элемент в конец очереди, а у последнего элемента уже есть <code>Next</code>, он просто поможет подвинуть <code>Tail</code> на элемент вперёд и опять попытается добавить свой элемент уже в следующей итерации. Тогда при добавлении элемента и передвижении <code>Tail</code> его <code>CAS</code> для передвижения <code>Tail</code> не пройдёт – хвост уже перенесли.</p>
-<pre><code class="language-kotlin">fun enqueue (x: int) {
-    newTail := Node { Value = x, N = null}
-    while (true) { // CAS loop
-        tail := T
-        if CAS(&amp;tail.N, null, newTail) {
-            // 'newTail' just added, move the tail forward
-            CAS (&amp;T, tail, newTail)
-            return 
-        } else {
-            // help other enqueue operations
-            CAS(&amp;T, tail, tail.N)
-        }
-    }
-}
-</code></pre>
-<p>Если убрать ветку <code>else</code>, то алгоритм станет блокирующимся -- новые потоки будут ждать <code>CAS(&amp;T ...)</code>.</p>
-<p>Удаление реализуется так же, как в стеке.</p>
+<p>С одной стороны, мы одну вершину обрабатываем одну вершину несколько раз, но с другой — мы параллельны. На реальных графах это профит.</p>
+<h2 id="Алгоритм-Дейкстры"><a class="header" href="#Алгоритм-Дейкстры">Алгоритм Дейкстры</a></h2>
+<p>Дейкстра это примерно то же самое, что у нас, только у нас приоритетная очередь. Быстрая приоритетная очередь это миф, лучший случай это куча с локами. Но мы можем написать <strong>почти</strong> приоритетную очередь. Тогда алгоритм всё ещё будет верным, но у нас опять будут инверсии.</p>
+<h3 id="multi-queue"><a class="header" href="#multi-queue">Multi-Queue</a></h3>
+<p>Возьмём T независимых очередей с локами. Операции пусть будут работать над случайно выбранными очередями.</p>
+<ul>
+<li>Добавление: добавляем в случайную очередь</li>
+<li>Удаление: берем <strong>две</strong> случайные очереди и удаляем из лучшей.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="lec_1.1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="lec_3.1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
-                            </a>
-                            <a rel="next" href="lec_2.1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
                     </nav>
@@ -237,11 +194,8 @@ fun top(): Int? {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="lec_1.1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="lec_3.1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
-                    </a>
-                    <a rel="next" href="lec_2.1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 
