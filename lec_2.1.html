@@ -77,7 +77,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html" class="active"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html" class="active"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -164,7 +164,7 @@ $$\forall e, f \in H : (e = f) \lor (e \to f) \lor (f \to e)$$</p>
 <h2 id="Правильное-исполнение"><a class="header" href="#Правильное-исполнение">Правильное исполнение</a></h2>
 <p><strong>Сужение</strong> исполнения \(H\) на поток \(P\) это исполнение, где остались только операции, происходящие в потоке \(P\). Обозначается \(H\mid_P\).</p>
 <p>Исполнение <strong>правильное</strong>, если его сужение на каждый поток является <strong>последовательным</strong>. Мы рассматриваем только такие исполнения.</p>
-<p>В реальности современные процессоры в силу конвейерности не последовательны в рамках одного ядра, но это спрятано от юзера.</p>
+<p>В реальности современные процессоры в силу конвейерности не последовательны в рамках одного ядра, но это спрятано от юзера. </p>
 <p><strong>Программный порядок (program order)</strong> - сужение отношения &quot;произошло до&quot; на отдельные потоки.</p>
 <p>Сужение истории \(H\) на объект \(x\) - множество операций над \(x\), обозначается \(H\mid_x\)</p>
 <h2 id="Допустимое-исполнение"><a class="header" href="#Допустимое-исполнение">Допустимое исполнение</a></h2>
@@ -204,6 +204,9 @@ $$\forall e, f \in H : (e = f) \lor (e \to f) \lor (f \to e)$$</p>
                             <a rel="prev" href="lec_1.2.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
+                            <a rel="next" href="lec_2.2.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
@@ -212,6 +215,9 @@ $$\forall e, f \in H : (e = f) \lor (e \to f) \lor (f \to e)$$</p>
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                     <a rel="prev" href="lec_1.2.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="lec_2.2.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 
