@@ -1,7 +1,5 @@
 # Лекция 1.2. Lock-free stack и Michael-Scott queue
 
-# Lock-free Treiber Stack & Michael-Scott Queue
----
 ## План лекции
 
 1. Неблокирующиеся алгоритмы
