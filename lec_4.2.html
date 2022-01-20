@@ -257,16 +257,16 @@ def concurrentOperationX(args):
         know[id] = prev.next.decide(node)
         know[id].seq = prev.seq + 1
     know[id] = announce[id]
-return updateMyLastTo(announce[id])
+    return updateMyLastTo(announce[id])
 
 def updateMyLastTo(node):
     while last != node:
         res = my.serialOperationX(last.args)
         last = last.next
-return res
+    return res
 </code></pre>
 <p>В реальности строят более эффективный алгоритм на <code>CAS</code>ах, а скорее просто используют уникальный алгоритм для каждой структуры.</p>
-<p>Очень хорошо эта идея работает на персистентных структурах (привет clojure). На самом деле Treiber stack персистентный. Для алгоритмов на <code>CAS</code> циклах очень просто доказать линеаризуемость — точка успешного <code>CAS</code> это точка линеаризации..</p>
+<p>Очень хорошо эта идея работает на персистентных структурах (привет clojure). На самом деле Treiber stack персистентный. Для алгоритмов на <code>CAS</code> циклах очень просто доказать линеаризуемость — точка успешного <code>CAS</code> это точка линеаризации.</p>
 
                     </main>
 
