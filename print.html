@@ -241,8 +241,6 @@ public class SimpleTest1 {
 </code></pre>
 <p>Результат: всё сломалось. В теории у нас три равновозможных результата, на практике все четыре возможны, при этом <code>{1, 1}</code> реже всех. Почему? Потому что тестировали на TSO (Total Store Order) модели памяти, где операции записи кладутся в буфер, и чтение в некоторых случаях было выполнено раньше, чем запись «дошла» до памяти.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-12-lock-free-stack-и-michael-scott-queue"><a class="header" href="#Лекция-12-lock-free-stack-и-michael-scott-queue">Лекция 1.2. Lock-free stack и Michael-Scott queue</a></h1>
-<h1 id="lock-free-treiber-stack--michael-scott-queue"><a class="header" href="#lock-free-treiber-stack--michael-scott-queue">Lock-free Treiber Stack &amp; Michael-Scott Queue</a></h1>
-<hr />
 <h2 id="План-лекции"><a class="header" href="#План-лекции">План лекции</a></h2>
 <ol>
 <li>Неблокирующиеся алгоритмы</li>
