@@ -1,0 +1,9 @@
+[book]
+authors = ["Maxim Mikhaylov"]
+language = "ru"
+multilingual = false
+src = "src"
+title = "Конспект по параллельному программированию"
+
+[output.html]
+mathjax-support = true
