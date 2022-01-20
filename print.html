@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -784,6 +784,166 @@ while activeNodes &gt; 0 {
 <li>Добавление: добавляем в случайную очередь</li>
 <li>Удаление: берем <strong>две</strong> случайные очереди и удаляем из лучшей.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-41-Алгоритмы-без-блокировок-Построения-на-регистрах"><a class="header" href="#Лекция-41-Алгоритмы-без-блокировок-Построения-на-регистрах">Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></h1>
+<p>Мы не можем требовать, чтобы алгоритм не использовал блокировку, ибо это нечто непонятное. Вместо этого мы будем использовать одно из безусловных <strong>условий прогресса</strong></p>
+<h3 id="Отсутствие-помех-obstruction-freedom"><a class="header" href="#Отсутствие-помех-obstruction-freedom">Отсутствие помех (obstruction-freedom)</a></h3>
+<p>Если несколько потоков пытаются выполнить операцию, то любой из них должен выполнить её за конечное время, если все другие потоки остановить в любом месте.</p>
+<p>Это условие слабое.</p>
+<h3 id="Отсутствие-блокировок-lock-freedom"><a class="header" href="#Отсутствие-блокировок-lock-freedom">Отсутствие блокировок (lock-freedom)</a></h3>
+<p>Если несколько потоков пытаются выполнить операцию, то хотя бы один из них должен выполнить её за конечное время (независимо от действия/бездействия других потоков).</p>
+<p>На практике используется именно lock-freedom.</p>
+<p>Для hard realtime систем это условие недостаточно, так как нет условия, что все потоки вовремя все сделают.</p>
+<h3 id="Отсутствие-ожидания-wait-freedom"><a class="header" href="#Отсутствие-ожидания-wait-freedom">Отсутствие ожидания (wait-freedom)</a></h3>
+<p>Если какой-то поток пытается выполнить операцию, то он выполнит ее за конечное время независимо от действия или бездействия других потоков.</p>
+<p>С блокировкой объект не может быть obstruction-free.</p>
+<h2 id="Регистр"><a class="header" href="#Регистр">Регистр</a></h2>
+<p>Последовательная спецификация:</p>
+<pre><code class="language-python">class Register:
+    int r
+    
+    def write(x):
+        r = x
+    
+    def read():
+        return r
+</code></pre>
+<p>Физические регистры не атомарны</p>
+<ul>
+<li>Без ожидания</li>
+<li>Один читатель</li>
+<li>Один писатель</li>
+<li>Чтение и запись одновременно приводит к непредсказуемым результатам</li>
+<li><strong>Безопасны</strong>: после завершения записи будет прочитано последнее записанное значение</li>
+</ul>
+<p>Построим более полезный регистр. Это сугубо теоретическое упражнение, но идеи из него применимы на практике.</p>
+<p>Небезопасный регистр бесполезен.</p>
+<h3 id="Регулярные-регистры"><a class="header" href="#Регулярные-регистры">Регулярные регистры</a></h3>
+<p>При чтении выдает либо последнее записанное значение, либо одно из тех значений, что сейчас пишутся.</p>
+<p><img src="img/regular.png" alt="" /></p>
+<h3 id="Атомарные-регистры"><a class="header" href="#Атомарные-регистры">Атомарные регистры</a></h3>
+<p>Исполнение линеаризуемо.</p>
+<p><img src="img/atomic.png" alt="" /></p>
+<h3 id="Регулярный-srsw-булев-регистр"><a class="header" href="#Регулярный-srsw-булев-регистр">Регулярный SRSW булев регистр</a></h3>
+<p>Дано: безопасный SRSW булев регистр</p>
+<pre><code class="language-python">safe shared boolean r
+threadlocal boolean last
+
+def write(x):
+    if x != last:
+        last = x
+        r = x
+
+def read():
+    return r
+</code></pre>
+<p>Так как у нас только один писатель и регистр булев, то мы просто не перезаписываем последнее записанное значение.</p>
+<h3 id="Регулярный-srsw-регистр-m-значений"><a class="header" href="#Регулярный-srsw-регистр-m-значений">Регулярный SRSW регистр, M значений</a></h3>
+<p>Дано: Регулярный SRSW булев регистр</p>
+<p>Запоминаем M значений в унарном коде с помощью M регистров. Тогда индекс первого нуля — значение. Пишем справа налево, а читаем слева направо.</p>
+<pre><code class="language-python">regular shared boolean[M] r
+
+def write(x): # справа налево
+    r[x] = 0
+    for i = x - 1 downto 0: r[i] = 1
+
+def read(): # слева направо
+    for i = 0 to M - 1:
+        if r[i] == 0:
+            return i
+</code></pre>
+<h3 id="Атомарный-srsw-регистр-с-версиями"><a class="header" href="#Атомарный-srsw-регистр-с-версиями">Атомарный SRSW регистр с версиями</a></h3>
+<p>Дано: Регулярный SRSW регистр на M значений</p>
+<pre><code class="language-python">regular shared (int x, int v) r
+
+threadlocal (int x, int v) lastRead
+threadlocal int lastWriteV
+
+def write(x):
+    lastWriteV++
+    r = (x, lastWriteV)
+
+def read():
+    cur = r
+    if cur.v &gt; lastRead.v
+        lastRead = cur
+    return lastRead.x
+</code></pre>
+<p>В теории версии растут неограниченно, поэтому проблема.</p>
+<p><em>Теорема: (вне курса)</em> Не существует алгоритма построения атомарного регистра без ожидания, которые использует конечное число регулярных регистров конечного размера так, чтобы их писал только писатель, а читал только читатель.</p>
+<p>Вывод: нужна обратная связь от читателя к писателю. Мы не будем это рассматривать.</p>
+<h3 id="Атомарный-mrsw-регистр"><a class="header" href="#Атомарный-mrsw-регистр">Атомарный MRSW регистр</a></h3>
+<p>Дано: атомарный SRSW регистр M значений</p>
+<p>Идея: заведет по регистру для каждого читателя и будем писать в них.</p>
+<p><img src="img/mrsw.png" alt="" /></p>
+<p>Очень жаль, идея не работает:</p>
+<p><img src="img/mrsw_fail.png" alt="" /></p>
+<p>Заведём ещё \(n(n-1)\) регистров для общения между читателями.</p>
+<ul>
+<li>Каждый читатель выбирает более позднее значение из
+записанного писателем и из прочитанных значений других
+читателей.</li>
+<li>После этого читатель записывает свое прочитанное значение и
+версию для всех остальных читателей.</li>
+</ul>
+<p><img src="img/mrsw_real.png" alt="" /></p>
+<h3 id="Атомарный-mrmw-регистр-с-версиями"><a class="header" href="#Атомарный-mrmw-регистр-с-версиями">Атомарный MRMW регистр с версиями</a></h3>
+<p><img src="img/mrmw.png" alt="" /></p>
+<p>Писатели будут между собой по алгоритму булочника выбирать билетик. Билетиком штампуют записанное значение, читатели выбирают самое позднее.</p>
+<h3 id="Атомарный-снимок-состояния-n-регистров"><a class="header" href="#Атомарный-снимок-состояния-n-регистров">Атомарный снимок состояния N регистров</a></h3>
+<p>Последовательная спецификация:</p>
+<pre><code class="language-python">class Snapshot:
+    shared int r[N]
+
+    def update(i, x):
+        r[i] = x
+
+    def scan():
+        return copy()
+
+    private def copy():
+        res = new int[N]
+        for i = 0..N-1: res[i] = r[i]
+        return res
+</code></pre>
+<pre><code class="language-python">shared (int x, int v) r[N]
+
+# wait-free
+def update(i, x):
+    sr[i] = (x, r[i].v + 1)
+
+# lock-free
+def scan():
+    old = copy()
+    loop:
+        cur = copy()
+        if forall i: cur[i].v == old[i].v:
+            return cur.x
+    old = cur
+</code></pre>
+<p>При большом числе <code>update</code> <code>scan</code> виснет. Поэтому пусть каждый регистр хранит копию снимка и при обновлении будем делать <code>scan</code>, чтобы помочь другим операциям.</p>
+<pre><code class="language-python">shared (int x, int v, int[N] s) r[N]
+
+def update(i, x):
+    s = scan()
+    r[i] = (x, r[i].v + 1, s)
+
+# wait-free, O(N^2)
+def scan():
+    old = copy()
+    boolean updated[N]
+        loop:
+            cur = copy()
+            for i = 0..N-1:
+                if cur[i].v != old[i].v:
+                    if updated[i]: return cur[i].s
+                    else:
+                        update[i] = true
+                        old = cur
+                        continue loop
+        return cur.x
+</code></pre>
+<p><em>Лемма:</em> Если значение изменилось второй раз, то хранящаяся там копия снимка s была получена вложенной операцией scan.</p>
+<p><img src="img/shot.png" alt="" /></p>
 
                     </main>
 
