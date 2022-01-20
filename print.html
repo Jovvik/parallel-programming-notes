@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1 Практические построения на списках</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -588,6 +588,158 @@ def unlock:
     mutex2.unlock
 </code></pre>
 <p>С помощью блокировок можно сделать любой объект линеаризуемым. Однако есть проблема: может произойти deadlock - если два процесса ждут друг друга (с двумя блокировками). Это решается с помощью выстраивания блокировок в иерархию, где мы захватываем сначала более приоритетные блокировки.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-31-Практические-построения-на-списках"><a class="header" href="#Лекция-31-Практические-построения-на-списках">Лекция 3.1 Практические построения на списках</a></h1>
+<h2 id="Множество-на-односвязном-списке"><a class="header" href="#Множество-на-односвязном-списке">Множество на односвязном списке</a></h2>
+<p>Это казалось бы игрушечная структура данных, но она используется в очень полезном skip listе.</p>
+<p>Пусть в списке у нас есть граничные элементы \(-\infty, +\infty\).</p>
+<ul>
+<li>Элементы упорядочены по возрастанию</li>
+<li>Мы ищем окно (<code>cur</code>, <code>next</code>), такое что <code>cur.key</code> \(&lt;\) <code>k</code> \(\leq\) <code>next.key</code> и <code>cur.N = next</code></li>
+<li>Если мы ищем элемент, то он будет в <code>next</code> (или его не будет)</li>
+<li>Новый элемент будем добавлять между <code>cur</code> и <code>next</code>.</li>
+</ul>
+<p>Псевдокод:</p>
+<pre><code class="language-kotlin">class Node(var N: Node, val key: Int)
+
+val head = Node(−∞, Node(∞, null))
+
+fun findWindow(key): (Node, Node) {
+    cur := head
+    next := cur.N
+    while (next.key &lt; key):
+        cur = next
+        next = cur.N
+    return (cur, next)
+}
+
+fun contains(key): Boolean {
+    (cur, next) := findWindow(key)
+    return next.key == key
+}
+
+fun add(key) {
+    (cur, next) := findWindow(key)
+    if (next.key != key)
+        cur.N = Node(key, next)
+}
+
+fun remove(key) {
+    (cur, next) := findWindow(key)
+    if (next.key == key)
+        cur.N = next.N
+}
+</code></pre>
+<p>Проблема, удаление последовательных вершин в различных потоках может не сработать.</p>
+<p><code>a -&gt; b -&gt; c -&gt; d</code> станет <code>a -&gt; c -&gt; d</code> и <code>b -&gt; d</code>, в итоге <code>c</code> не удалено.</p>
+<p>Можно навесить грубую синхронизацию, но это неэффективно.</p>
+<h3 id="Тонкая-синхронизация"><a class="header" href="#Тонкая-синхронизация">Тонкая синхронизация</a></h3>
+<p>Можно навесить лок на каждую вершину. Тогда поток будет держать блокировку на <code>cur</code> и <code>next</code>. В коде это будет выглядеть так:</p>
+<pre><code class="language-kotlin">fun findWindow(key): (Node, Node) {
+    cur := head; cur.lock()
+    next := cur.N; next.lock()
+    while (next.key &lt; key):
+        cur.unlock(); cur = next
+        next = cur.N; next.lock()
+    return (cur, next)
+}
+
+fun contains(key): Boolean {
+    (cur, next) := findWindow(key)
+    cur.unlock(); next.unlock()
+    return next.key == key
+}
+</code></pre>
+<h3 id="Оптимистичная-синхронизация"><a class="header" href="#Оптимистичная-синхронизация">Оптимистичная синхронизация</a></h3>
+<ol>
+<li>Найти окно без синхронизации.</li>
+<li>Взять блокировки на <code>cur</code> и <code>next</code>.</li>
+<li>Проверить, что <code>cur.N == next</code>.</li>
+<li>Проверить, что <code>cur</code> не удален.</li>
+<li>Выполнить операцию.</li>
+<li>При ошибке попробовать заново.</li>
+</ol>
+<p>При проверке, что <code>cur</code> не удален, мы держа блокировку на него, ищем его еще раз в линию.</p>
+<pre><code class="language-kotlin">class Node(@Volatile var N: Node, val key: Int)
+
+fun contains(key): Boolean {
+    while (true) {
+        (cur, next) := findWindow(key)
+        cur.lock(); next.lock()
+        if (!validate(cur, next))
+            cur.unlock(); next.unlock(); continue
+        return next.key == key
+    }
+}
+
+fun validate(cur, next): Boolean {
+    var node = head
+    while(node.key &lt; cur.key):
+    node = node.N
+    return (cur, next) == (node, node.N)
+}
+</code></pre>
+<h3 id="Ленивая-синхронизация"><a class="header" href="#Ленивая-синхронизация">Ленивая синхронизация</a></h3>
+<p>Будем лениво удалять. В <code>Node</code> добавляем <code>removed: Boolean</code>. Удаление будет происходить в две фазы:</p>
+<ol>
+<li><code>node.removed = true</code> - логическое удаление</li>
+<li>Физическое удаление</li>
+</ol>
+<p>Тогда валидация тривиальна:</p>
+<pre><code class="language-kotlin">fun validate(cur, next) = !cur.removed &amp;&amp; !next.removed &amp;&amp; cur.N == next
+</code></pre>
+<h3 id="Неблокирующая-синхронизация"><a class="header" href="#Неблокирующая-синхронизация">Неблокирующая синхронизация</a></h3>
+<p>Т.к. <code>N</code> <code>volatile</code>, то мы увидели состояние памяти на момент записи в <code>N</code>. Поэтому мы можем не брать блокировку при поиске. Тогда:</p>
+<pre><code class="language-kotlin">fun contains(key): Boolean {
+    (cur, next) := findWindow(key)
+    return next.key == key
+}
+</code></pre>
+<p>Наивная запись на <code>CAS</code> опять не работает. <code>a -&gt; b -&gt; c -&gt; d</code> станет <code>a -&gt; c -&gt; d</code> и <code>b -&gt; d</code>, в итоге <code>c</code> не удалено. Проблема в том, что мы не знали, что <code>b</code> уже удалено. Казалось бы, можно написать двусвязный список, но нет, это очень сложно. Вместо этого объединим <code>N</code> и <code>removed</code> в одну переменную, пару <code>(N, removed)</code> и таким образом запретим делать изменения на <code>N</code>, если нода удалена. В java это <code>AtomicMarkableReference</code>, реализовано через обертку.</p>
+<pre><code class="language-kotlin">fun findWindow(key): (Node, Node) {
+    retry: while(true):
+        var cur = head, next = cur.N
+        boolean[] removed = new boolean[1]
+        while (next.key &lt; key):
+            val node = next.N.get(removed)
+            if (removed[0]):
+                // удалим физически
+                if (!cur.N.CAS(next, node, false, false)):
+                    continue retry
+                next = node
+            else:
+                cur = next
+                next = cur.N
+        // тут еще проверка, что next не удален
+        return (cur, next)
+}
+
+fun contains(key): Boolean {
+    (cur, next) = findWindow(key)
+    return next.key == key
+}
+
+fun add(key) {
+    while(true):
+        (cur, next) = findWindow(key)
+        if (next.key == key):
+            return
+        val node = Node(key, next)
+        if (cur.N.CAS(next, node, false, false)):
+            return
+}
+
+fun remove(key) {
+    while(true):
+        (cur, next) = findWindow(key)
+        if (next.key != key)
+            return // false
+        val node = next.N.getReference();
+        if (next.N.CAS(node, node, false, true)):
+            // помогаем findWindow удалить физически
+            cur.N.CAS(next, node, false, false)
+            return // true
+}
+</code></pre>
 
                     </main>
 
