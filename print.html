@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1397,7 +1397,7 @@ fun update(item: T) = lock.withLock {
 }
 </code></pre>
 <p>Поток будит только сам себя. Кроме того, <code>unpark</code> будит не только уже спящий поток, но и поток который уснет, т.е. <code>park</code> будет no-op.</p>
-<p>Если мы хотим сделать ожидание из многих потоков, то надо использовать <code>AbstractQueuedSynchronizer</code>, правда он вообще-то предназначен для написания блокировок.</p>
+<p>Если мы хотим сделать ожидание из многих потоков, то надо использовать <code>AbstractQueuedSynchronizer</code>, правда он вообще-то предназначен для написания блокировок .</p>
 <pre><code class="language-kotlin">inner class Sync : AbstractQueuedSynchronizer() {
     override fun tryAcquire(arg: Int): Boolean {
         val cur = v.value ?: return false
@@ -1426,6 +1426,106 @@ fun take(): T {
     return releaseResultsSlot(arg)
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-72-Сложные-блокировки"><a class="header" href="#Лекция-72-Сложные-блокировки">Лекция 7.2. Сложные блокировки</a></h1>
+<p>Мы раньше строили таблицу конфликтов для регистров, но мы можем так же делать и для своих структур. Например, для стека:</p>
+<table><thead><tr><th></th><th><code>size</code></th><th><code>push</code></th><th><code>pop</code></th></tr></thead><tbody>
+<tr><td><code>size</code></td><td></td><td>x</td><td>x</td></tr>
+<tr><td><code>push</code></td><td>x</td><td>x</td><td>x</td></tr>
+<tr><td><code>pop</code></td><td>x</td><td>x</td><td>x</td></tr>
+</tbody></table>
+<p>Если у нас грубая блокировка, то мы исключили <code>size</code>-<code>size</code>, но это не нужно. Чтобы не блокать то, что не нужно, придуманы read-write lock'и, которые имеют два режима: Read (Shared) и Write (Exclusive).</p>
+<table><thead><tr><th></th><th>R</th><th>W</th></tr></thead><tbody>
+<tr><td>R</td><td></td><td>x</td></tr>
+<tr><td>W</td><td>x</td><td>x</td></tr>
+</tbody></table>
+<p>Пример:</p>
+<pre><code class="language-kotlin">private val lock = ReentrantReadWriteLock()
+
+val size: Int get() = lock.readLock().withLock {
+    top
+}
+
+fun push(item: T) = lock.writeLock().withLock {
+    data[top++] = item
+}
+
+fun pop(): T = lock.writeLock().withLock {
+    data[--top]
+}
+</code></pre>
+<p>Хотелось бы сделать что-то такое, но это deadlock потока с самим собой:</p>
+<pre><code class="language-kotlin">val lock = ReentrantReadWriteLock()
+lock.readLock().withLock {
+    println(&quot;reading&quot;)
+    lock.writeLock().withLock {
+        println(&quot;writing&quot;)
+    }
+}
+</code></pre>
+<p>Казалось бы, можно придумать <code>UpgradableReadWriteLock</code> со следующей матрицей совместимости:</p>
+<table><thead><tr><th></th><th>\(R_P\)</th><th>\(R_Q\)</th><th>\(W_P\)</th><th>\(W_Q\)</th></tr></thead><tbody>
+<tr><td>\(R_P\)</td><td></td><td></td><td></td><td>x</td></tr>
+<tr><td>\(R_Q\)</td><td></td><td></td><td>x</td><td></td></tr>
+<tr><td>\(W_P\)</td><td></td><td>x</td><td></td><td>x</td></tr>
+<tr><td>\(W_Q\)</td><td>x</td><td></td><td>x</td><td></td></tr>
+</tbody></table>
+<p>Однако если несколько потоков хотят <code>upgrade</code>нуться, то есть опасность deadlockа. Тогда создадим состояние &quot;Intent to write&quot;, которое будет эксклюзивным:</p>
+<table><thead><tr><th></th><th>R</th><th>IW</th><th>W</th></tr></thead><tbody>
+<tr><td>R</td><td></td><td></td><td>x</td></tr>
+<tr><td>IW</td><td></td><td>x</td><td>x</td></tr>
+<tr><td>W</td><td>x</td><td>x</td><td>x</td></tr>
+</tbody></table>
+<p>Напишем такой хитрый лок.</p>
+<pre><code class="language-kotlin">private const val R_BIT = 1
+private const val R_MASK = (1 shl 30) - 1
+private const val IW_BIT = 1 shl 30
+private const val W_BIT = 1 shl 31
+
+class Sync : AbstractQueuedSynchronizer() {
+    override fun tryAcquireShared(arg: Int): Int { // R или IW
+        while (true) {
+            val state = this.state
+            if (state and W_BIT != 0) // если кто-то W, то нельзя
+                return -1
+            // если кто-то еще IW и мы хотим IW, то нельзя
+            if (arg == IW_BIT &amp;&amp; state and IW_BIT != 0) 
+                return -1
+            val update = state + arg
+            if (compareAndSetState(state, update))
+                return 1
+        }
+    }
+    
+    override fun tryReleaseShared(arg: Int): Boolean {
+        while (true) {
+            val state = this.state
+            val update = state - arg
+            if (compareAndSetState(state, update))
+                return update and (R_MASK or IW_BIT) == 0
+        }
+    }
+    
+    override fun tryAcquire(arg: Int): Boolean { // тривиально
+        while (true) {
+            val state = this.state
+            if (state != 0)
+                return false
+            if (compareAndSetState(state, state or W_BIT))
+                return true
+        }
+    }
+    
+    override fun tryRelease(arg: Int): Boolean {
+        while (true) {
+            val state = this.state
+            val update = state and W_BIT.inv()
+            if (compareAndSetState(state, update))
+                return true
+        }
+    }
+}
+</code></pre>
+<p>Ещё нужно в <code>ThreadLocal</code> состоянии держать сколько локов каждого типа мы держим, чтобы если мы держим лок, не брать его физически.</p>
 
                     </main>
 
