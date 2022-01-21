@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1185,6 +1185,246 @@ fun dequeue(): T = while (true) {
 fun tryLock() = CAS(&amp;lock, false, true)
 
 fun unlock() { locked = false }
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-71-Мониторы-и-ожидание"><a class="header" href="#Лекция-71-Мониторы-и-ожидание">Лекция 7.1. Мониторы и ожидание</a></h1>
+<h2 id="Ожидание"><a class="header" href="#Ожидание">Ожидание</a></h2>
+<p>Пусть операция над объектом это функция \(f(S, P) = (S', R)\). Раньше операции были всюду определены на паре \((S, P)\), то есть если операцию нельзя выполнить, то это исключение. Однако в общем случае операции могут быть частично определены, т.е. операция не может завершиться и ждет.</p>
+<p>Например, очередь ограниченного размера с ожиданием:</p>
+<ul>
+<li><code>put(item)</code> - кладет элемент в очередь, <em>если есть место</em> (иначе ждет)</li>
+<li><code>take(): item</code> - забирает элемент из очереди, <em>если очередь не пустая</em> (иначе ждет)</li>
+</ul>
+<p>Это часто происходит в паттерне producer-cosumer (привет, ГК).</p>
+<p>Пусть в исполнении может не быть \(res(A)\). Тогда будем называть исполнение линеаризуемым, если для незавершенных операций можно:</p>
+<ul>
+<li>или добавить ответы,</li>
+<li>или выкинуть их из исполнения</li>
+</ul>
+<p>Так, чтобы получилось допустимое последовательное исполнение.</p>
+<h2 id="Мониторы"><a class="header" href="#Мониторы">Мониторы</a></h2>
+<p>Это mutex + условные переменные.</p>
+<p>В jvm у каждого объекта есть монитор с одной условной переменной, <code>wait</code>, <code>notify</code>, <code>notifyAll</code> работают с ней.</p>
+<h3 id="Циклическая-очередь-на-массиве"><a class="header" href="#Циклическая-очередь-на-массиве">Циклическая очередь на массиве</a></h3>
+<pre><code class="language-java">public class BlockingQueue&lt;T&gt; {
+    private final T[] items; // элементы
+    private final int n; // == items.length
+    private int head; // голова
+    private int tail; // хвост
+    
+    public synchronized int size() {
+        return (tail - head + n) % n;
+    }
+    
+    // не ждущий
+    public synchronized T poll() {
+        if (head == tail) return null;
+        T result = items[head];
+        items[head] = null;
+        head = (head + 1) % n;
+        return result;
+    }
+    
+    // ждущий
+    public synchronized T take() throws InterruptedException /* позже поговорим */ {
+        while (head == tail) wait(); // ждем
+        // wait может сам по себе проснуться, поэтому его надо делать в цикле
+        T result = items[head];
+        items[head] = null;
+        head = (head + 1) % n;
+        return result;
+    }
+}
+</code></pre>
+<p>Метод <code>wait</code> - часть монитора, освобождает блокировку и ждёт сигнала о пробуждении. Сингал посылается через <code>notify</code> и <code>notifyAll</code>. Оба могут быть использованы только в критической секции.</p>
+<pre><code class="language-java">// не ждущий
+public synchronized boolean offer(T item) {
+    int next = (tail + 1) % n;
+    if (next == head) return false;
+    items[tail] = item;
+    if (head == tail) notifyAll();
+    tail = next;
+    return true;
+}
+
+public synchronized void put(T item) throws Inter...Ex... {
+    while (true) { // пока не подходящее состояние
+        int next = (tail + 1) % n;
+        if (next == head) { wait(); continue; }
+        items[tail] = item;
+        if (head == tail) notifyAll();
+        tail = next;
+        return;
+    }
+}
+</code></pre>
+<p>Нам не важно, где в коде вызван <code>notifyAll</code>.</p>
+<p><code>notify</code> более точечный, потому что можно пробуждать только один поток. В нашем примере это не сработает, т.к. <code>put</code> может пробудить другой <code>put</code> поток, а нам нужно будить <code>take</code> потоки. Однако в <code>ReentrantLock</code> можно заводить условные переменные через <code>lock.newCondition()</code>. На других языках условные переменные используются только так.</p>
+<pre><code class="language-kotlin">class BlockingQueue&lt;T&gt;(private val n: Int) {
+    private val items = arrayOfNulls&lt;Any&gt;(n)
+    private var head = 0
+    private var tail = 0
+
+    private val lock = ReentrantLock()
+    private val notEmpty = lock.newCondition()
+    private val notFull = lock.newCondition()
+}
+
+fun take(): T = lock.withLock {
+    while (head == tail) notEmpty.await() // ждем
+    val result = items[head] as T
+    items[head] = null
+    // ТУТ БАГ!
+    if ((tail + 1) % n == head) notFull.signal() // была полна
+    head = (head + 1) % n
+    result // вернули из withLock
+}
+
+fun put(item: T): Unit = lock.withLock {
+    while (true) { // пока не подходящее состояние
+        val next = (tail + 1) % n
+        if (next == head) { notFull.await(); continue }
+        items[tail] = item
+        // ТУТ БАГ!
+        notEmpty.signal() // надо посылать один сигнал
+        tail = next
+        return@withLock
+    }
+}
+</code></pre>
+<p>Два сигнала от разных <code>take</code> могут сигнальнуть одному и тому же <code>put</code>. Нам не гарантировано, что сигнальнутый поток сразу проснется, поэтому он может проснуться после обоих сигналов и тогда другой <code>put</code> не проснется, а должен бы.</p>
+<p>Простой способ починить: слать сигнал без условия. В худшем случае сигнал быстро отработает, т.к. будить некого.</p>
+<p>Переключение контекста (разбудить поток) — очень дорого.</p>
+<h2 id="interrupt"><a class="header" href="#interrupt">Interrupt</a></h2>
+<p>У каждого потока есть флаг <code>interrupted</code>. Он выставляется методом <code>Thread.interrupt</code>, его проверяют методы <code>wait</code>/<code>await</code> и если он выставлен, то сбрасывают его и кидают <code>InterruptedException</code>. Таким образом можно кооперативно прекращать ожидание.</p>
+<p>Если мы не знаем, что делать с <code>InterruptedException</code>, то надо писать так:</p>
+<pre><code class="language-java">public T takeOrNull() {
+    try {
+        return take();
+    } catch (InterruptedException e) {
+        // перевыставим флаг interrupted
+        Thread.currentThread().interrupt();
+        return null;
+    }
+}
+</code></pre>
+<pre><code class="language-java">public class DoSomethingThread&lt;T&gt; extends Thread {
+    private final BlockingQueue&lt;T&gt; queue; // задачи
+    private volatile boolean closed; // флаг останова
+
+    public void close() {
+        closed = true; // ставим флаг останова (сначала!)
+        interrupt(); // чтобы прервать ожидания
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (!closed) {
+            T item = queue.take();
+            doSomething(item);
+            }
+        } catch (InterruptedException e) {
+            // а вот здесь можем проигнорировать -- уже выходим
+        }
+    }
+}
+</code></pre>
+<h3 id="Обновляемое-значение"><a class="header" href="#Обновляемое-значение">Обновляемое значение</a></h3>
+<p>Реализация с блокировкой:</p>
+<pre><code class="language-kotlin">class DataHolder&lt;T&gt; {
+    private var value: T? = null
+    private val lock = ReentrantLock()
+
+    fun update(item: T) = lock.withLock {
+        value = item
+    }
+
+    fun remove(): T? = lock.withLock {
+        value.also { value = null }
+    }
+}
+</code></pre>
+<p>Реализация с ожиданием:</p>
+<pre><code class="language-kotlin">private val updated = lock.newCondition()
+
+fun take(): T = lock.withLock {
+    while (value == null) updated.await()
+    value!!.also { value = null }
+}
+
+fun update(item: T) = lock.withLock {
+    value = item
+    updated.signal()
+}
+</code></pre>
+<p>Реализация без блокировки, но не ждущими методами:</p>
+<pre><code class="language-kotlin">class DataHolder&lt;T&gt; {
+    private val v = atomic&lt;T?&gt;(null)
+
+    fun update(item: T) {
+        v.value = item // volatile write
+    }
+
+    fun remove(): T? {
+        v.loop { cur -&gt;
+            if (cur == null) return null
+            if (v.compareAndSet(cur, null)) return cur
+        }
+    }
+}
+</code></pre>
+<p>Ожидание без блокировки через <code>park</code>:</p>
+<pre><code class="language-kotlin">class TakerThread&lt;T&gt; : Thread() {
+// ...
+
+    fun take(): T {
+        assert(Thread.currentThread() == this)
+        v.loop { cur -&gt;
+            if (cur == null) {
+                LockSupport.park()
+                if (interrupted()) // ручная проверка флага
+                    throw InterruptedException()
+                return@loop // continue loop
+            }
+            if (v.compareAndSet(cur, null)) return cur
+        }
+    }
+    
+    fun update(item: T) {
+        v.value = item // volatile write
+        LockSupport.unpark(this)
+    }
+}
+</code></pre>
+<p>Поток будит только сам себя. Кроме того, <code>unpark</code> будит не только уже спящий поток, но и поток который уснет, т.е. <code>park</code> будет no-op.</p>
+<p>Если мы хотим сделать ожидание из многих потоков, то надо использовать <code>AbstractQueuedSynchronizer</code>, правда он вообще-то предназначен для написания блокировок.</p>
+<pre><code class="language-kotlin">inner class Sync : AbstractQueuedSynchronizer() {
+    override fun tryAcquire(arg: Int): Boolean {
+        val cur = v.value ?: return false
+        if (!v.compareAndSet(cur, null)) return false
+        // надо как-то вернуть значение отсюда, будем держать в поле
+        results[arg] = cur
+        return true
+    }
+
+    // всегда &quot;освобождаем&quot; -- будим следующего
+    override fun tryRelease(arg: Int): Boolean = true
+}
+
+private val sync = Sync()
+
+fun update(item: T) {
+    v.value = item // volatile write
+    sync.release(0) // шлем сигнал
+}
+
+fun take(): T {
+    val arg = reserveResultsSlot() // приходится крутиться
+    sync.acquireInterruptibly(arg) // ждет внутри
+    // нужна перепроверка чтобы не потерять unpark
+    if (v.value != null) sync.release(0)
+    return releaseResultsSlot(arg)
+}
 </code></pre>
 
                     </main>
