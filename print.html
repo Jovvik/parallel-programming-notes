@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li><li class="chapter-item expanded "><a href="lec_9.html"><strong aria-hidden="true">14.</strong> Лекция 9. Dual Data Structures</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1533,6 +1533,104 @@ class Sync : AbstractQueuedSynchronizer() {
 <p>Когда мы перемещаем ячейку, мы помечаем её как перемещенную и запрещаем ее изменять.</p>
 <p><img src="img/cell2.png" alt="" /></p>
 <p>Для конкретных use case'ов можно оптимизировать нашу структуру.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-9-dual-data-structures"><a class="header" href="#Лекция-9-dual-data-structures">Лекция 9. Dual Data Structures</a></h1>
+<p>Часто встречается паттерн producer-consumer, где n клиентов вбрасывают в пул задачи и m workerов их выполняют. Типичный способ коммуникации клиентов и workerов - synchronous queue:</p>
+<pre><code class="language-kotlin">interface SynchronousQueue&lt;E&gt; {
+    suspend fun send(element: E)
+    suspend fun receive(): E
+}
+</code></pre>
+<p>Как мы используем такую очередь?</p>
+<p>Клиенты шлют задачи:</p>
+<pre><code class="language-kotlin">val task = Task(...)
+tasks.send(task)
+</code></pre>
+<p>Worker'ы получают задачи в бесконечном цикле:</p>
+<pre><code class="language-kotlin">while (true) {
+    val task = tasks.receive() // спим пока задач нет
+    processTask(task)
+}
+</code></pre>
+<p>Мы часто ложимся спать и просыпаемся, это медленно. Поэтому мы хотим использовать корутины — это легковесные потоки. В корутинах общение происходит через каналы, что более безопасно, чем общая память.</p>
+<p>API корутин примерно такое:</p>
+<pre><code class="language-kotlin">class Coroutine {
+    var element: Any? // то что отправляем
+    ...
+}
+
+fun curCroruntine(): Coroutine
+
+suspend fun suspend(c: Coroutine)
+fun resume(c: Coroutine)
+</code></pre>
+<p>Реализуем канал, пока что не думая про гонки:</p>
+<pre><code class="language-kotlin">val senders = Queue&lt;Coroutine&gt;()
+val receivers = Queue&lt;Coroutine&gt;()
+
+suspend fun send(element: T) {
+    if (receivers.isEmpty()) {
+        val curCor = curCoroutine()
+        curCor.element = element
+        senders.enqueue(curCor)
+        suspend(curCor)
+    } else {
+        val r = receivers.dequeue()
+        r.element = element
+        resume(r)
+    }
+}
+
+suspend fun receive(): T {
+    if (senders.isEmpty()) {
+        val curCor = curCoroutine()
+        receivers.enqueue(curCor)
+        suspend(curCor)
+        return curCor.element
+    } else {
+        val s = senders.dequeue()
+        val res = s.element
+        resume(s)
+        return res
+    }
+}
+</code></pre>
+<p>В golang receive и send заворачиваются в грубую блокировку. Это не очень быстро. В java все быстрее за счет идеи, что: либо одна очередь пустая, либо другая, либо обе. Тогда будем держать только одну очередь (Майкла-Скотта), в которой храним пару (корутина, элемент (который надо отправить) (или некоторая константа если это <code>receive</code>)).</p>
+<pre><code class="language-kotlin">fun send(x) {
+    t := TAIL
+    h := HEAD
+    if (t == h || t.isSender()) {
+        enqueueAndSuspend(t, x)
+    } else {
+        dequeAndResume(h)
+    }
+}
+</code></pre>
+<p>Это не линеаризуемо в силу засыпания, потому что операции ждут друг друга. Поэтому мы разбиваем <code>receive</code> на две части:</p>
+<ul>
+<li><code>request</code>, которая регистрирует поток как ждущий</li>
+<li><code>follow-up</code>, которая работает после получения данных</li>
+</ul>
+<p>Тогда у нас есть линеаризуемость.</p>
+<h3 id="faa-1"><a class="header" href="#faa-1">FAA</a></h3>
+<p>Каналы похожи на очереди. Мы их можем ускорить с помощью <code>Fetch-and-add</code>, с двумя указателями.</p>
+<pre><code class="language-kotlin">suspend fun send(x: T) {
+    val s = FAA(&amp;sendIdx, +1)
+    if s &lt; receiveIdx:
+        // try to put f into w[s]
+        // or resume the receiver
+    else:
+        // suspend in w[s]
+}
+
+suspend fun receive(): T {
+    val r = FAA(&amp;receiveIdx, +1)
+    if r &lt; sendIdx:
+        // try to retrieve either
+        // value or sender from w[r]
+    else:
+        // suspend in w[r]
+}
+</code></pre>
 
                     </main>
 

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Лекция 3.2. Relaxed Algorithms - Конспект по параллельному программированию</title>
+        <title>Лекция 9. Dual Data Structures - Конспект по параллельному программированию</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -77,7 +77,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html" class="active"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li><li class="chapter-item expanded "><a href="lec_9.html"><strong aria-hidden="true">14.</strong> Лекция 9. Dual Data Structures</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li><li class="chapter-item expanded "><a href="lec_9.html" class="active"><strong aria-hidden="true">14.</strong> Лекция 9. Dual Data Structures</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -136,60 +136,111 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="Лекция-32-relaxed-algorithms"><a class="header" href="#Лекция-32-relaxed-algorithms">Лекция 3.2. Relaxed Algorithms.</a></h1>
-<h2 id="bfs"><a class="header" href="#bfs">BFS</a></h2>
-<p>Вспомним обычный BFS:</p>
-<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
-start.distance = 0
-Q.add(start)
-while Q.isNotEmpty() {
-    u := Q.remove()
-    d := u.distance
-    for (v : u.edges) {
-        if v.distance != INF: continue
-        v.distance = d + 1
-        Q.add(v)
+                        <h1 id="Лекция-9-dual-data-structures"><a class="header" href="#Лекция-9-dual-data-structures">Лекция 9. Dual Data Structures</a></h1>
+<p>Часто встречается паттерн producer-consumer, где n клиентов вбрасывают в пул задачи и m workerов их выполняют. Типичный способ коммуникации клиентов и workerов - synchronous queue:</p>
+<pre><code class="language-kotlin">interface SynchronousQueue&lt;E&gt; {
+    suspend fun send(element: E)
+    suspend fun receive(): E
+}
+</code></pre>
+<p>Как мы используем такую очередь?</p>
+<p>Клиенты шлют задачи:</p>
+<pre><code class="language-kotlin">val task = Task(...)
+tasks.send(task)
+</code></pre>
+<p>Worker'ы получают задачи в бесконечном цикле:</p>
+<pre><code class="language-kotlin">while (true) {
+    val task = tasks.receive() // спим пока задач нет
+    processTask(task)
+}
+</code></pre>
+<p>Мы часто ложимся спать и просыпаемся, это медленно. Поэтому мы хотим использовать корутины — это легковесные потоки. В корутинах общение происходит через каналы, что более безопасно, чем общая память.</p>
+<p>API корутин примерно такое:</p>
+<pre><code class="language-kotlin">class Coroutine {
+    var element: Any? // то что отправляем
+    ...
+}
+
+fun curCroruntine(): Coroutine
+
+suspend fun suspend(c: Coroutine)
+fun resume(c: Coroutine)
+</code></pre>
+<p>Реализуем канал, пока что не думая про гонки:</p>
+<pre><code class="language-kotlin">val senders = Queue&lt;Coroutine&gt;()
+val receivers = Queue&lt;Coroutine&gt;()
+
+suspend fun send(element: T) {
+    if (receivers.isEmpty()) {
+        val curCor = curCoroutine()
+        curCor.element = element
+        senders.enqueue(curCor)
+        suspend(curCor)
+    } else {
+        val r = receivers.dequeue()
+        r.element = element
+        resume(r)
+    }
+}
+
+suspend fun receive(): T {
+    if (senders.isEmpty()) {
+        val curCor = curCoroutine()
+        receivers.enqueue(curCor)
+        suspend(curCor)
+        return curCor.element
+    } else {
+        val s = senders.dequeue()
+        val res = s.element
+        resume(s)
+        return res
     }
 }
 </code></pre>
-<p>Просто заменить <code>Queue</code> на <code>ConcurrentQueue</code> не поможет, т.к. первый поток удалит первую вершину из очереди, все остальные потоки выйдут из цикла и алгоритм станет однопоточным.</p>
-<p>Можем считать число вершин в обработке вместо <code>Q.isNotEmpty()</code>. Тогда есть другая проблема: мы не гарантируем порядок обработки вершин, это никакой не BFS. Но нас это не очень и волнует, ибо мы будем обновлять расстояние только если оно меньше того, которое уже посчитано:</p>
-<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
-start.distance = 0
-Q.add(start)
-activeNodes = 1
-while activeNodes &gt; 0 {
-    u := Q.remove()
-    d := u.distance
-    for (v : u.edges) {
-        if v.updateDistIfLower(d + 1) {
-            v.distance = d + 1
-            Q.add(v)
-            activeNodes++
-        }
+<p>В golang receive и send заворачиваются в грубую блокировку. Это не очень быстро. В java все быстрее за счет идеи, что: либо одна очередь пустая, либо другая, либо обе. Тогда будем держать только одну очередь (Майкла-Скотта), в которой храним пару (корутина, элемент (который надо отправить) (или некоторая константа если это <code>receive</code>)).</p>
+<pre><code class="language-kotlin">fun send(x) {
+    t := TAIL
+    h := HEAD
+    if (t == h || t.isSender()) {
+        enqueueAndSuspend(t, x)
+    } else {
+        dequeAndResume(h)
     }
-    activeNodes--
 }
 </code></pre>
-<p>С одной стороны, мы одну вершину обрабатываем одну вершину несколько раз, но с другой — мы параллельны. На реальных графах это профит.</p>
-<h2 id="Алгоритм-Дейкстры"><a class="header" href="#Алгоритм-Дейкстры">Алгоритм Дейкстры</a></h2>
-<p>Дейкстра это примерно то же самое, что у нас, только у нас приоритетная очередь. Быстрая приоритетная очередь это миф, лучший случай это куча с локами. Но мы можем написать <strong>почти</strong> приоритетную очередь. Тогда алгоритм всё ещё будет верным, но у нас опять будут инверсии.</p>
-<h3 id="multi-queue"><a class="header" href="#multi-queue">Multi-Queue</a></h3>
-<p>Возьмём T независимых очередей с локами. Операции пусть будут работать над случайно выбранными очередями.</p>
+<p>Это не линеаризуемо в силу засыпания, потому что операции ждут друг друга. Поэтому мы разбиваем <code>receive</code> на две части:</p>
 <ul>
-<li>Добавление: добавляем в случайную очередь</li>
-<li>Удаление: берем <strong>две</strong> случайные очереди и удаляем из лучшей.</li>
+<li><code>request</code>, которая регистрирует поток как ждущий</li>
+<li><code>follow-up</code>, которая работает после получения данных</li>
 </ul>
+<p>Тогда у нас есть линеаризуемость.</p>
+<h3 id="faa"><a class="header" href="#faa">FAA</a></h3>
+<p>Каналы похожи на очереди. Мы их можем ускорить с помощью <code>Fetch-and-add</code>, с двумя указателями.</p>
+<pre><code class="language-kotlin">suspend fun send(x: T) {
+    val s = FAA(&amp;sendIdx, +1)
+    if s &lt; receiveIdx:
+        // try to put f into w[s]
+        // or resume the receiver
+    else:
+        // suspend in w[s]
+}
+
+suspend fun receive(): T {
+    val r = FAA(&amp;receiveIdx, +1)
+    if r &lt; sendIdx:
+        // try to retrieve either
+        // value or sender from w[r]
+    else:
+        // suspend in w[r]
+}
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="lec_3.1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="lec_8.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
-                            </a>
-                            <a rel="next" href="lec_4.1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
                     </nav>
@@ -197,11 +248,8 @@ while activeNodes &gt; 0 {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="lec_3.1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="lec_8.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
-                    </a>
-                    <a rel="next" href="lec_4.1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 
