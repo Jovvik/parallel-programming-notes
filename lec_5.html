@@ -3,8 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title></title>
-        <base href="/">
+        <title>Лекция 5. JMM - Конспект по параллельному программированию</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -78,7 +77,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html" class="active"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -137,19 +136,75 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="document-not-found-404"><a class="header" href="#document-not-found-404">Document not found (404)</a></h1>
-<p>This URL is invalid, sorry. Please use the navigation bar or search to continue.</p>
+                        <h1 id="Лекция-5-jmm"><a class="header" href="#Лекция-5-jmm">Лекция 5. JMM</a></h1>
+<p>JMM делалась давно и не везде было 64 бита. Поэтому <code>long</code> и <code>double</code> не атомарный по железу и тогда надо устраивать синхронизацию. Решили этого не делать и не гарантировать атомарность, хотя в реальности она гарантирована. По JMM доступ атомарен для всех базовых типов, кроме <code>long</code> и <code>double</code>. К <code>volatile long</code> и <code>volatile double</code> атомарен.</p>
+<p>На очень старом железе возможно, что напечатает <code>0xFFFFFFFF00000000</code>:</p>
+<pre><code class="language-java">// before
+long l = 0;
+
+// thread 0
+l = -1; // 0xFF..F
+
+// thread 1
+print(l);
+</code></pre>
+<h3 id="word-tearing"><a class="header" href="#word-tearing">Word tearing</a></h3>
+<pre><code class="language-java">// before
+T[] tarr = new T[..];
+tarr[0] = tarr[1] = val0;
+
+// thread 0
+tarr[0] = val1;
+
+// thread 1
+tarr[1] = val1;
+
+// thread 2
+join t0, t1;
+assert(tarr[0] == tarr[1]);
+</code></pre>
+<p>В JVM обновление двух независимых переменных независимо. Это поддерживается железом.</p>
+<p>А что делать с <code>boolean</code>? Будем делать <code>boolean</code> 1 байт. Если хотим эффективные биты, то можно использовать <code>BitSet</code>. Но тогда нет гарантий про word tearing и в аналогичном коде <code>assert</code> может упасть (см. выше)</p>
+<p>Модель памяти это компромисс между удобством программирования, сложностью реализации языка и поддержки со стороны железа.</p>
+<h3 id="Последовательная-согласованность"><a class="header" href="#Последовательная-согласованность">Последовательная согласованность</a></h3>
+<p>В целом мы хотим иметь последовательную согласованность, чтобы можно было анализировать чередованием. Но это усложняет локальные оптимизации.</p>
+<p>По JMM, если в исполнении нет гонок (нет параллельных конфликтующих операций), то оно последовательно согласованно. Но что такое &quot;параллельно&quot; с точки зрения JMM?</p>
+<h3 id="program-order"><a class="header" href="#program-order">Program order</a></h3>
+<p>Программный порядок связывает действия внутри одного потока.</p>
+<h3 id="synchronization-actions"><a class="header" href="#synchronization-actions">Synchronization actions</a></h3>
+<p>Это:</p>
+<ul>
+<li><code>volatile</code> чтение/запись</li>
+<li>Взятие/отпускание блокировки</li>
+<li>Первое и последнее действие в потоке</li>
+<li>Запуск потока</li>
+<li>Действия, обнаруживающее останов потока</li>
+</ul>
+<p>Все synchronization actions образую <strong>synchronization order</strong>. Это линейный порядок и он консистентен с program order. Все чтения в synchronization order видят последние записи в synchronization order.</p>
+<h3 id="synchronizes-with-order"><a class="header" href="#synchronizes-with-order">Synchronizes-with order</a></h3>
+<p>SO это очень мощно, мы будем использовать SW - подпорядок SO, ограниченный парными действиями синхронизации, например <code>volatile</code> read/write над одной и той же переменной.</p>
+<h3 id="happens-before-order"><a class="header" href="#happens-before-order">Happens-before order</a></h3>
+<p>\(HB = (SW \cup PO)^+\)</p>
+<p>Чтения видят либо последнюю запись по HB, либо что-то еще под гонкой.</p>
+<h3 id="final-семантика"><a class="header" href="#final-семантика">Final семантика</a></h3>
+<p>В конце конструктора происходит freeze action, которое &quot;замораживает&quot; поля.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="lec_4.2.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
                         <div style="clear: both"></div>
                     </nav>
                 </div>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="lec_4.2.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
             </nav>
 
         </div>
