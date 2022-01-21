@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Лекция 3.2. Relaxed Algorithms - Конспект по параллельному программированию</title>
+        <title>Лекция 6. FAA-Based Queue &amp; Flat Combining - Конспект по параллельному программированию</title>
         <!-- Custom HTML head -->
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
@@ -77,7 +77,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html" class="active"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html" class="active"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -136,60 +136,72 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="Лекция-32-relaxed-algorithms"><a class="header" href="#Лекция-32-relaxed-algorithms">Лекция 3.2. Relaxed Algorithms.</a></h1>
-<h2 id="bfs"><a class="header" href="#bfs">BFS</a></h2>
-<p>Вспомним обычный BFS:</p>
-<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
-start.distance = 0
-Q.add(start)
-while Q.isNotEmpty() {
-    u := Q.remove()
-    d := u.distance
-    for (v : u.edges) {
-        if v.distance != INF: continue
-        v.distance = d + 1
-        Q.add(v)
+                        <h1 id="Лекция-6-faa-based-queue--flat-combining"><a class="header" href="#Лекция-6-faa-based-queue--flat-combining">Лекция 6. FAA-Based Queue &amp; Flat Combining</a></h1>
+<h3 id="faa"><a class="header" href="#faa">FAA</a></h3>
+<p>FAA это <code>Fetch-And-Add(addr, delta)</code>, атомарно увеличивает значение на <code>delta</code> и возвращает старое значение. Это лучше масштабируется, чем <code>CAS</code> цикл, так как операция всегда успешна.</p>
+<h3 id="obstruction-free-queue"><a class="header" href="#obstruction-free-queue">Obstruction-free queue</a></h3>
+<p>Пусть у нас есть бесконечный массив с двумя указателями <code>enqIdx</code>, <code>deqIndx</code>. Что делать, если <code>dequeue</code> не увидел никакую запись? Тогда пометим ячейку как сломанную и обе операции начнутся заново.</p>
+<pre><code class="language-kotlin">fun enqueue(x: T) = while (true) {
+    val enqIdx = FAA(&amp;enqIdx, 1)
+    if (CAS(&amp;data[enqIdx], null, x))
+    return
+}
+
+fun dequeue() = while (true) {
+    if (isEmpty()) return null
+    val deqIdx = FAA(&amp;deqIdx, 1)
+    val res = SWAP(&amp;data[deqIdx], BROKEN)
+    if (res == null) continue
+    return res
+}
+
+fun isEmpty(): Boolean = deqIdx &gt;= enqIdx
+</code></pre>
+<p>Это не lock-free, но на практике он почти lock-free. Кроме того, lock-free алгоритмы на практике почти всегда являются wait-free в силу честности планировщиков ОС.</p>
+<p>В реальности у нас не бесконечный массив. Поэтому будем хранить Michal-Scott очередь сегментов.</p>
+<pre><code class="language-kotlin">fun enqueue(x: T) = while (true) {
+    val tail = this.tail
+    val enqIdx = FAA(&amp;tail.enqIdx, 1)
+    if (enqIdx &gt;= NODE_SIZE) {
+        // try to insert new node with “x”
+    } else {
+        if (CAS(&amp;tail.data[enqIdx], null, x))
+            return
     }
 }
-</code></pre>
-<p>Просто заменить <code>Queue</code> на <code>ConcurrentQueue</code> не поможет, т.к. первый поток удалит первую вершину из очереди, все остальные потоки выйдут из цикла и алгоритм станет однопоточным.</p>
-<p>Можем считать число вершин в обработке вместо <code>Q.isNotEmpty()</code>. Тогда есть другая проблема: мы не гарантируем порядок обработки вершин, это никакой не BFS. Но нас это не очень и волнует, ибо мы будем обновлять расстояние только если оно меньше того, которое уже посчитано:</p>
-<pre><code class="language-kotlin">val Q = Queue&lt;Node&gt;()
-start.distance = 0
-Q.add(start)
-activeNodes = 1
-while activeNodes &gt; 0 {
-    u := Q.remove()
-    d := u.distance
-    for (v : u.edges) {
-        if v.updateDistIfLower(d + 1) {
-            v.distance = d + 1
-            Q.add(v)
-            activeNodes++
-        }
+
+fun dequeue(): T = while (true) {
+    val head = this.head
+    val deqIdx = FAA(&amp;head.deqIdx, 1)
+    if (deqIdx &gt;= NODE_SIZE) {
+        val headNext = head.next ?: return null
+        CAS(&amp;this.head, head, headNext)
+        continue
     }
-    activeNodes--
+    val res = SWAP(&amp;head.data[deqIdx], BROKEN)
+    if (res == null) continue
+    return res
 }
 </code></pre>
-<p>С одной стороны, мы одну вершину обрабатываем одну вершину несколько раз, но с другой — мы параллельны. На реальных графах это профит.</p>
-<h2 id="Алгоритм-Дейкстры"><a class="header" href="#Алгоритм-Дейкстры">Алгоритм Дейкстры</a></h2>
-<p>Дейкстра это примерно то же самое, что у нас, только у нас приоритетная очередь. Быстрая приоритетная очередь это миф, лучший случай это куча с локами. Но мы можем написать <strong>почти</strong> приоритетную очередь. Тогда алгоритм всё ещё будет верным, но у нас опять будут инверсии.</p>
-<h3 id="multi-queue"><a class="header" href="#multi-queue">Multi-Queue</a></h3>
-<p>Возьмём T независимых очередей с локами. Операции пусть будут работать над случайно выбранными очередями.</p>
-<ul>
-<li>Добавление: добавляем в случайную очередь</li>
-<li>Удаление: берем <strong>две</strong> случайные очереди и удаляем из лучшей.</li>
-</ul>
+<p>Тогда алгоритм lock-free.</p>
+<h3 id="flat-combining"><a class="header" href="#flat-combining">Flat combining</a></h3>
+<p>Идея: будем выполнять операции последовательно, структура данных защищена блокировкой. Поток, который держит блокировку — комбайнер, он выполняет как свою, так и чужие операции. Таким образом, мы не проигрываем по кешу и не так часто берем блокировку.</p>
+<p>Это делается через массив, в который (случайно) кладутся дескрипторы операций. Держащий блокировку поток обходит весь массив и выполняет все операции, которые видит. Массив очевидно атомарный.</p>
+<p>Очередь на flat combining куда быстрее, чем michael-scott. Однако FAA еще быстрее. В целом flat combining полезно, когда грубая/тонкая блокировка слишком медленно, а flat combining хватает. Бывает, что flat combining быстрее чем lock-free (см. очередь Michael-Scott).</p>
+<p>Лок для flat combining очень простой: просто атомарный бул:</p>
+<pre><code class="language-kotlin">var locked = false
+
+fun tryLock() = CAS(&amp;lock, false, true)
+
+fun unlock() { locked = false }
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="lec_3.1.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="lec_5.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
-                            </a>
-                            <a rel="next" href="lec_4.1.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
                             </a>
                         <div style="clear: both"></div>
                     </nav>
@@ -197,11 +209,8 @@ while activeNodes &gt; 0 {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="lec_3.1.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="lec_5.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
-                    </a>
-                    <a rel="next" href="lec_4.1.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 

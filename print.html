@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1127,6 +1127,65 @@ assert(tarr[0] == tarr[1]);
 <p>Чтения видят либо последнюю запись по HB, либо что-то еще под гонкой.</p>
 <h3 id="final-семантика"><a class="header" href="#final-семантика">Final семантика</a></h3>
 <p>В конце конструктора происходит freeze action, которое &quot;замораживает&quot; поля.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-6-faa-based-queue--flat-combining"><a class="header" href="#Лекция-6-faa-based-queue--flat-combining">Лекция 6. FAA-Based Queue &amp; Flat Combining</a></h1>
+<h3 id="faa"><a class="header" href="#faa">FAA</a></h3>
+<p>FAA это <code>Fetch-And-Add(addr, delta)</code>, атомарно увеличивает значение на <code>delta</code> и возвращает старое значение. Это лучше масштабируется, чем <code>CAS</code> цикл, так как операция всегда успешна.</p>
+<h3 id="obstruction-free-queue"><a class="header" href="#obstruction-free-queue">Obstruction-free queue</a></h3>
+<p>Пусть у нас есть бесконечный массив с двумя указателями <code>enqIdx</code>, <code>deqIndx</code>. Что делать, если <code>dequeue</code> не увидел никакую запись? Тогда пометим ячейку как сломанную и обе операции начнутся заново.</p>
+<pre><code class="language-kotlin">fun enqueue(x: T) = while (true) {
+    val enqIdx = FAA(&amp;enqIdx, 1)
+    if (CAS(&amp;data[enqIdx], null, x))
+    return
+}
+
+fun dequeue() = while (true) {
+    if (isEmpty()) return null
+    val deqIdx = FAA(&amp;deqIdx, 1)
+    val res = SWAP(&amp;data[deqIdx], BROKEN)
+    if (res == null) continue
+    return res
+}
+
+fun isEmpty(): Boolean = deqIdx &gt;= enqIdx
+</code></pre>
+<p>Это не lock-free, но на практике он почти lock-free. Кроме того, lock-free алгоритмы на практике почти всегда являются wait-free в силу честности планировщиков ОС.</p>
+<p>В реальности у нас не бесконечный массив. Поэтому будем хранить Michal-Scott очередь сегментов.</p>
+<pre><code class="language-kotlin">fun enqueue(x: T) = while (true) {
+    val tail = this.tail
+    val enqIdx = FAA(&amp;tail.enqIdx, 1)
+    if (enqIdx &gt;= NODE_SIZE) {
+        // try to insert new node with “x”
+    } else {
+        if (CAS(&amp;tail.data[enqIdx], null, x))
+            return
+    }
+}
+
+fun dequeue(): T = while (true) {
+    val head = this.head
+    val deqIdx = FAA(&amp;head.deqIdx, 1)
+    if (deqIdx &gt;= NODE_SIZE) {
+        val headNext = head.next ?: return null
+        CAS(&amp;this.head, head, headNext)
+        continue
+    }
+    val res = SWAP(&amp;head.data[deqIdx], BROKEN)
+    if (res == null) continue
+    return res
+}
+</code></pre>
+<p>Тогда алгоритм lock-free.</p>
+<h3 id="flat-combining"><a class="header" href="#flat-combining">Flat combining</a></h3>
+<p>Идея: будем выполнять операции последовательно, структура данных защищена блокировкой. Поток, который держит блокировку — комбайнер, он выполняет как свою, так и чужие операции. Таким образом, мы не проигрываем по кешу и не так часто берем блокировку.</p>
+<p>Это делается через массив, в который (случайно) кладутся дескрипторы операций. Держащий блокировку поток обходит весь массив и выполняет все операции, которые видит. Массив очевидно атомарный.</p>
+<p>Очередь на flat combining куда быстрее, чем michael-scott. Однако FAA еще быстрее. В целом flat combining полезно, когда грубая/тонкая блокировка слишком медленно, а flat combining хватает. Бывает, что flat combining быстрее чем lock-free (см. очередь Michael-Scott).</p>
+<p>Лок для flat combining очень простой: просто атомарный бул:</p>
+<pre><code class="language-kotlin">var locked = false
+
+fun tryLock() = CAS(&amp;lock, false, true)
+
+fun unlock() { locked = false }
+</code></pre>
 
                     </main>
 
