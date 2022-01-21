@@ -78,7 +78,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li><li class="chapter-item expanded "><a href="lec_9.html"><strong aria-hidden="true">14.</strong> Лекция 9. Dual Data Structures</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="lec_1.1.html"><strong aria-hidden="true">1.</strong> Лекция 1.1. Введение и мотивация</a></li><li class="chapter-item expanded "><a href="lec_1.2.html"><strong aria-hidden="true">2.</strong> Лекция 1.2. Lock-free stack и Michael-Scott queue</a></li><li class="chapter-item expanded "><a href="lec_2.1.html"><strong aria-hidden="true">3.</strong> Лекция 2.1. Определения и Формализм</a></li><li class="chapter-item expanded "><a href="lec_2.2.html"><strong aria-hidden="true">4.</strong> Лекция 2.2. Построение атомарных объектов и блокировки</a></li><li class="chapter-item expanded "><a href="lec_3.1.html"><strong aria-hidden="true">5.</strong> Лекция 3.1. Практические построения на списках</a></li><li class="chapter-item expanded "><a href="lec_3.2.html"><strong aria-hidden="true">6.</strong> Лекция 3.2. Relaxed Algorithms</a></li><li class="chapter-item expanded "><a href="lec_4.1.html"><strong aria-hidden="true">7.</strong> Лекция 4.1. Алгоритмы без блокировок: Построения на регистрах</a></li><li class="chapter-item expanded "><a href="lec_4.2.html"><strong aria-hidden="true">8.</strong> Лекция 4.2. Алгоритмы без блокировок: Консенсус</a></li><li class="chapter-item expanded "><a href="lec_5.html"><strong aria-hidden="true">9.</strong> Лекция 5. JMM</a></li><li class="chapter-item expanded "><a href="lec_6.html"><strong aria-hidden="true">10.</strong> Лекция 6. FAA-Based Queue &amp; Flat Combining</a></li><li class="chapter-item expanded "><a href="lec_7.1.html"><strong aria-hidden="true">11.</strong> Лекция 7.1. Мониторы и ожидание</a></li><li class="chapter-item expanded "><a href="lec_7.2.html"><strong aria-hidden="true">12.</strong> Лекция 7.2. Сложные блокировки</a></li><li class="chapter-item expanded "><a href="lec_8.html"><strong aria-hidden="true">13.</strong> Лекция 8. Многопоточные хеш-таблицы</a></li><li class="chapter-item expanded "><a href="lec_9.html"><strong aria-hidden="true">14.</strong> Лекция 9. Dual Data Structures</a></li><li class="chapter-item expanded "><a href="lec_10.html"><strong aria-hidden="true">15.</strong> Лекция 10. Железо и спинлоки</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -1631,6 +1631,92 @@ suspend fun receive(): T {
         // suspend in w[r]
 }
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="Лекция-10-Железо-и-спинлоки"><a class="header" href="#Лекция-10-Железо-и-спинлоки">Лекция 10. Железо и спинлоки</a></h1>
+<p>У ядер есть кеш. Это проблема, ибо если одно ядро записало в свой кеш, а другое ядро прочитало старое закешированное значение, то мы проиграли. У современных процессоров кеш когерентен, поэтому таких проблем нет. Это реализовано через протокол когерентности, одним из таких является MESI (в реальных процессорах чуть сложнее).</p>
+<p>У каждого кешлайна в кеше есть статус:</p>
+<ul>
+<li>Modified</li>
+<li>Exclusive</li>
+<li>Shared</li>
+<li>Invalid</li>
+</ul>
+<p>Изначально статус I, при получении данных из памяти получается E (только в одном кеше). Если другое ядро читает E-кешлайн первого ядра, то на запрос отвечает кеш первого ядра и в обоих кешах эта линия становится S. При изменении значения статус становится M, а в остальных кешах линия инвалидируется.</p>
+<p>Если состояние IM, то первое ядро прочитает из кеша второго и опять станет SS. В память мы пишем при flush из кеша.</p>
+<p>Простейший Test-And-Set lock:</p>
+<pre><code class="language-python">class TASLock:
+    boolean locked
+    
+    def lock():
+        # сбрасывает все кеши, т.к. требует Exclusive и забивает шину
+        while locked.getAndSet(true):
+            pass
+    
+    def unlock():
+        locked = false
+</code></pre>
+<p>Применим double-checked locking - добавим <code>while locked: pass</code>. Таким образом, ожидание не создает трафик. Но в момент <code>unlock</code> все ядра пытаются захватить лок и опять кушают ресурсы. Добавим задержку (backoff) в цикл в <code>lock</code>. Тогда не все будут ломиться одновремнно и пока задержка пройдет, возможно другой поток уже возьмет лок, тогда мы не будем пытаться его брать.</p>
+<p><img src="img/locks.png" alt="" /></p>
+<h3 id="clh-lock"><a class="header" href="#clh-lock">CLH Lock</a></h3>
+<p>Этот лок first-come first-served.</p>
+<pre><code class="language-python"># padнуто до размера кешлинии
+class QNode:
+    boolean locked # shared, atomic
+
+class CLHLock:
+    tail = QNode() # shared, atomic
+    threadlocal my = QNode()
+    
+    def lock():
+        my.locked = True
+        pred = tail.getAndSet(my)
+        while pred.locked: pass
+
+    def unlock():
+        my.locked = False
+        my = pred
+</code></pre>
+<p>Получается неявная очередь, где каждый ждет предыдущий поток. Теперь при <code>unlock</code> только один поток побежит в шину.</p>
+<p>В NUMA системах это не очень хорошо работает, потому что мы ждём на памяти предыдущего процессора.</p>
+<h3 id="mcs"><a class="header" href="#mcs">MCS</a></h3>
+<p>Тоже FCFS, но ждёт на своей памяти. В ноду добавляем указатель на следующую вершину.</p>
+<pre><code class="language-python">class CLHLock:
+    tail = QNode() # shared, atomic
+    threadlocal my = null
+    
+    def lock():
+        my = QNode() # alloc in my memory!
+        my.locked = True
+        pred = tail.getAndSet(my)
+        if pred != null:
+            pred.next = my
+            while my.locked: pass
+    
+    def unlock():
+        if my.next == null:
+            if tail.CAS(my, null): # мы хвост, действительно никого больше нет
+                return
+            else: # мы не хвост, просто кто-то не успел выставить
+                while my.next == null:  # ждем пока не проставят
+                    pass
+        my.next.locked = False
+</code></pre>
+<p>И у MCS и у CHL есть одна проблема: tail меняется всеми потоками и это большая конкуренция. Она неисправима, если мы хотим FCFS lock, то нам нужно синхронизироваться насчет порядка. При очень большом числе ядер это слишком проблематично, проще отказаться от FCFS.</p>
+<h3 id="lock-cohorting"><a class="header" href="#lock-cohorting">Lock cohorting</a></h3>
+<p>Ядра на одном узле (с общей памятью) делят свой обычный лок. Есть также глобальный лок, который мы ждем после локального. В глобальный лок стучится максимум столько потоков, сколько и узлов, а их обычно немного.</p>
+<ul>
+<li>Глобальный лок: <strong>Thread-Oblivious</strong>
+<ul>
+<li>Его брать и освобождать могут любые потоки</li>
+<li>Пример: Backoff</li>
+</ul>
+</li>
+<li>Локальный лок: <strong>Cohort Dtection</strong>
+<ul>
+<li>Должен уметь понимать, есть ли другие локи, которые его ждут.</li>
+<li>Пример: MCS</li>
+</ul>
+</li>
+</ul>
 
                     </main>
 
